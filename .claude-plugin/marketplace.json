@@ -1,0 +1,14 @@
+{
+  "name": "notemd-skills",
+  "owner": {
+    "name": "notemd"
+  },
+  "plugins": [
+    {
+      "name": "notemd",
+      "source": "./",
+      "description": "Claude Skills for notemd",
+      "version": "1.0.0"
+    }
+  ]
+}
