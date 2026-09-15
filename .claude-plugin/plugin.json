@@ -1,14 +1,18 @@
 {
   "name": "notemd",
-  "version": "1.0.0",
-  "description": "Claude Skills for notemd — create and edit notemd vault Markdown, understand its knowledge graph, and extract clean web content. Use when working with .md files in a notemd vault.",
+  "version": "1.1.0",
+  "description": "Claude Skills for notemd \u2014 drive note.md's MCP server for grounded research (search notes and PDFs, cite page anchors), create and edit notemd vault Markdown, and understand its knowledge graph.",
   "keywords": [
-    "notemd",
-    "markdown",
-    "wikilinks",
+    "citations",
     "knowledge-graph",
+    "markdown",
+    "mcp",
+    "notemd",
+    "notes",
+    "pdf",
     "pkm",
-    "notes"
+    "research",
+    "wikilinks"
   ],
   "license": "MIT"
 }
