@@ -1,6 +1,6 @@
 ---
 name: notemd-research
-description: Use when navigating, searching, or reasoning over a user's notemd knowledge base via the notemd-cli / MCP server (notes + imported PDFs/sources), or when helping structure/organize a notemd project. Covers the read tools available today (search, graph, read source text, status), the Premium / app-open / .aiignore rules, and how to structure a notemd vault (folder notes, [[wikilinks]], notes vs knowledge sources, citations).
+description: Use when navigating, searching, or reasoning over a user's notemd knowledge base via the notemd-cli / MCP server (notes + imported PDFs/sources), or when helping structure/organize a notemd project. Also use when the user asks you to do notemd's Literature Review Matrix, Argument Map or Evidence Scan work, or to handle work queued for "my AI agent". Covers the read tools (search, graph, read source text, status), the source/folder/anchor writes, the agent-extraction tools (get_matrix, set_matrix_cells, get_argument_map, set_argument_map, list_agent_requests, get_evidence_scan, set_evidence_scan), the Premium / app-open / .aiignore rules, and how to structure a notemd vault (folder notes, [[wikilinks]], notes vs knowledge sources, citations).
 ---
 
 # notemd — driving the CLI/MCP and structuring a project
@@ -16,7 +16,7 @@ You reach this through **`notemd-cli`** — a headless CLI **and** an **MCP serv
 
 ## The golden rules (read these first)
 
-1. **Reads launch the app; writes need it already open + Premium.** The CLI/MCP is a thin client: the notemd app runs every search, graph query and document read (it starts hidden if it isn't running — the first call can take a few seconds; don't retry while waiting). Write/create/delete operations on knowledge sources are **app-mediated** too, but they *never* launch the app: they require notemd to be running already and an active subscription. Never claim you changed the vault unless a write tool actually confirmed it.
+1. **Reads launch the app; writes need it already open + Premium.** The CLI/MCP is a thin client: the notemd app runs every search, graph query and document read (it starts hidden if it isn't running — the first call can take a few seconds; don't retry while waiting). Write/create/delete operations on knowledge sources are **app-mediated** too, but they *never* launch the app: they require notemd to be running already and an active subscription. The agent-extraction tools (Matrix, Argument Map, Evidence Scan, `list_agent_requests`) behave like writes here, reads included: they never launch the app. Never claim you changed the vault unless a write tool actually confirmed it.
 2. **Call `get_status` / `notemd-cli status` first when in doubt.** It reports Premium entitlement, project count, whether the app bridge is available, and whether writes are currently possible. Don't guess.
 3. **Premium-gated.** The CLI/MCP only works on a subscribed device. If a call says a subscription is required, tell the user once and stop — do **not** retry in a loop.
 4. **`.aiignore` is access control — respect it.** Excluded documents won't appear in results and reading them is refused. If content seems missing, it may be intentionally excluded. Never try to work around it (e.g. guessing paths).
@@ -28,6 +28,7 @@ You reach this through **`notemd-cli`** — a headless CLI **and** an **MCP serv
 
 ## How you connect
 
+- **Setup (the user does this once, Premium required):** in notemd, **Project ▸ Settings… ▸ AI Access ▸ Copy MCP Config**, then paste the JSON into the MCP host's config (Claude Desktop: `claude_desktop_config.json`). For Claude Code: `claude mcp add notemd -- "/Applications/notemd.app/Contents/Helpers/notemd-cli" mcp --project "<name>"`. The `.aiignore` files are edited on the same AI Access page.
 - **MCP (preferred):** the host launches `notemd-cli mcp --project "<name>"`. Discover tools with `tools/list` (each tool is annotated `access: read|write` and `requiresAppOpen`); call them with `tools/call`. Each call returns `{ "content": [ { "type": "text", "text": "<JSON or text>" } ] }` — for search/graph/list tools the `text` is a JSON string to parse. A tool-level failure returns `isError: true` with a human-readable message.
 - **CLI (alternative):** `notemd-cli <cmd> … --json` and parse stdout; exit code `1` = denied/not-found/error (message on stderr).
 - **Choosing a project:** `--project "<name>"` (look names up with `list-projects`), or explicit `--article-vault PATH --knowledge-vault PATH`.
@@ -36,7 +37,7 @@ You reach this through **`notemd-cli`** — a headless CLI **and** an **MCP serv
 
 ## Current capabilities (what exists today)
 
-Most tools are **reads** (the app answers them, launching itself if needed; `list_source_anchors`, `export_bibtex`, `job_status`, `list_projects`, `get_status` work even with the app closed). The full set of **writes** to knowledge sources (sources, folders, anchors) is live — these are **app-mediated**: notemd must be open (else you get `app_not_running`) and the subscription must be active. Notes/articles are written a different way — directly on the filesystem (see *Editing notes*), not through a write tool.
+Most tools are **reads** (the app answers them, launching itself if needed; `list_source_anchors`, `export_bibtex`, `job_status`, `list_projects`, `get_status` work even with the app closed). The full set of **writes** to knowledge sources (sources, folders, anchors) and the **agent-extraction** tools (Matrix, Argument Map, Evidence Scan) are live — these are **app-mediated**: notemd must be open (else you get `app_not_running`) and the subscription must be active. Notes/articles are written a different way — directly on the filesystem (see *Editing notes*), not through a write tool.
 
 ### Knowledge-source write tools (app-mediated — require notemd open + Premium)
 These mutate **knowledge sources** (PDFs/refs). Notes/articles are written a different way — via the filesystem (see *Editing notes* below), not these tools.
@@ -54,7 +55,46 @@ These mutate **knowledge sources** (PDFs/refs). Notes/articles are written a dif
 
 **Write rules:** call `get_status` first — if `writesAvailable` is false, tell the user to open notemd (and/or that Premium is required) and stop; **don't retry-loop** on `app_not_running` or `not_entitled`. Writes to a source excluded by `.aiignore` are refused. CLI equivalents mirror these: `source add-pdf|add-ref|edit|tag|move|delete`, `folder create|rename|delete`, `anchor create|update|delete`, `job status` (all take `--project`).
 
-### Read tools (10)
+### Agent extraction tools — Matrix, Argument Map, Evidence Scan (require notemd open + Premium)
+
+notemd normally runs these three features with its on-device model. You can do the reading instead and write the results back; **the app, not you, verifies every quote and sets the grade.** All seven tools go through the running app (`app_not_running` if it's closed; they don't launch it).
+
+When the user turns on **notemd ▸ Settings… ▸ AI Settings ▸ "Use my AI agent instead of the on-device model"**, the app stops running the local model for these features and instead **queues** the work (Evidence Scan, Matrix "Ask Agent", Argument Map "Ask Agent") in `<knowledge storage root>/Agent/work.json` and copies a ready-made prompt for the user to paste. Read that queue with `list_agent_requests`, never by opening the file. You can also do this work unprompted (no queued request needed) when the user asks.
+
+| Tool | Use |
+|---|---|
+| `list_agent_requests()` | Queued work: `{ evidenceScans: [{requestID, articleID, articleTitle, claim, context, scopeFolderID?, scopeFolderName?}], matrices: [{folderID, name, pendingCells}], argumentMaps: [{sourceID, title}] }`. Start here for "do my pending notemd work". |
+| `get_matrix(folderID)` | A folder's Literature Review Matrix: `columns` (`id, name, prompt, outputType, description?, examples?`), `sources` (`id, title, year?`), and filled `cells` (`sourceID, columnID, value, confidence, userEdited, quote?, page?`). |
+| `set_matrix_cells(folderID, cells, agent?)` | `cells`: `[{sourceID, columnID, value, quote?, page?}]`, `page` 1-based. `value` is the concise table answer; use `"N/A"` when the paper doesn't say. Returns counts: `written, skippedUserEdited, exact, supported, weak, none, remaining`. |
+| `get_argument_map(sourceID)` | The stored map as JSON, or `null`. |
+| `set_argument_map(sourceID, nodes, paperType?, replace?, agent?)` | `nodes`: `[{key, kind, label, summary?, quote, page?, parent?, relation?, evidenceKind?, citationLabel?}]`. `parent` is another node's `key`; `relation` (edge from this node to its parent) ∈ `supports \| qualifies \| rebuts \| assumes \| evidences` (default `supports`). `kind` ∈ `central_claim, sub_claim, evidence, assumption, counterargument, rebuttal, limitation, scope_condition, cited_warrant`. `paperType` ∈ `empirical_quant, empirical_qual, review, theoretical_position, methods, case_study, data_description, tutorial, other`. Returns counts: `exact, supported, weak, dropped, nodes, edges`. |
+| `get_evidence_scan(requestID \| articleID + claim)` | A stored scan (pending or completed) with its results, or `null`. |
+| `set_evidence_scan(results, requestID \| articleID + claim, agent?)` | `results`: `[{sourceID, verdict, confidence?, explanation, quote, page?}]`; `verdict` ∈ `supports \| contradicts \| nuanced \| irrelevant`, `confidence` ∈ `weak \| strong \| exact` (default `strong`). Answer a queued request with `requestID`, or record a new scan with `articleID` (the note's frontmatter `id`) + `claim`. Returns counts per verdict plus `unverified` and `stored`. |
+
+Pass `agent` as a short name (e.g. `"claude"`); the app shows it as the cell/map origin (`agent:claude`).
+
+**How the app grades what you send** (a quote is checked against the source's extracted full text and its indexed chunks; quotes under 8 characters never match):
+- **Matrix cells:** verbatim substring → **Exact**; matches only after lowercasing/collapsing whitespace → **Supported**; not found → **Weak** (the cell is still written). `"N/A"` → no grade. You can't send a confidence and you can't earn Exact with a paraphrase.
+- **Argument-map nodes:** same Exact / Supported / Weak rule; a node whose quote is missing or under 8 characters is **dropped**, and edges to a dropped or unknown `parent` are skipped. Invalid `kind`, empty `label` or duplicate `key` rejects the whole call (`bad_argument`).
+- **Evidence Scan results:** a quote not found in the source → result **dropped** (counted as `unverified`); a loose (case/whitespace-only) match caps `exact` at **strong**; otherwise your `confidence` is kept.
+
+**Refusals and protections:**
+- Cells the user edited are **skipped** (`skippedUserEdited`). A map with user-edited nodes is refused (`conflict`) unless you pass `replace: true` — only do that if the user asked to overwrite their edits.
+- `busy` while the on-device model is extracting that same matrix or generating that same argument map: tell the user to wait or cancel it in notemd, then retry once.
+- `not_found` for a matrix without columns: columns (and their prompts) are created by the user in notemd; you only fill cells.
+- Sources excluded by `.aiignore` are refused (`aiignore_excluded`); sources must belong to the folder (matrix) or project (evidence).
+- An open Matrix or Argument Map view updates in place. A matrix request leaves the queue once no cells remain empty; a map request when the map is stored.
+
+**Workflow:**
+1. `get_status` (writes available?) → `list_agent_requests` (or take the folder/source/claim the user named).
+2. Read the work: `get_matrix(folderID)` / `get_argument_map(sourceID)` / the scan's `claim` + `context`.
+3. Read the sources yourself with `get_source_text(sourceID)`; for Evidence Scan find candidates with `hybrid_search(claim, scope: "knowledge")` first (stay inside `scopeFolderID` when set).
+4. Write results with a **verbatim quote copied from `get_source_text`** and its 1-based page for every cell, node and verdict. Batch a whole source or matrix per call.
+5. Report the returned counts honestly (e.g. "12 written, 2 graded Weak, 1 skipped because you edited it"); if many came back Weak/dropped/unverified, re-check your quotes rather than claiming success. The grade shown in notemd is the app's, never yours.
+
+CLI equivalents (`--file -` reads JSON from stdin): `matrix get <folderID>` · `matrix set-cells <folderID> --file cells.json [--agent NAME]` · `argmap get <sourceID>` · `argmap set <sourceID> --file map.json [--agent NAME] [--replace]` (`map.json` = `{paperType?, nodes: […]}`) · `agent pending` · `evidence get (--request ID | --article ID --claim TEXT)` · `evidence set --file results.json (--request ID | --article ID --claim TEXT) [--agent NAME]` — all with `--project NAME`.
+
+### Read tools
 | Tool | Use |
 |---|---|
 | `get_status()` | Premium / app-bridge / writes-available snapshot. Call first if a write might be needed. |
@@ -84,6 +124,7 @@ These mutate **knowledge sources** (PDFs/refs). Notes/articles are written a dif
 - **"What has the user written about X?"** → `scope: "articles"`. **"What do my sources say about X?"** → `scope: "knowledge"`.
 - **Explore around a note:** `graph_related` (similar topics) + `graph_links` (their explicit links), then read the interesting ones.
 - **Read a PDF end-to-end:** `hybrid_search` to find it → take its `sourceID` → `get_source_text(sourceID)`.
+- **"Do my pending notemd work" / fill a matrix / map a paper / check a claim:** follow the *Agent extraction* workflow above (`list_agent_requests` → read sources → `set_*` → report the app's counts).
 
 ---
 
@@ -109,7 +150,7 @@ Understand the model before suggesting or making organizational changes:
 **Notes are the disk-mirrored half of notemd**, so you don't need any CLI/MCP write tool for them: **create, edit, move, and delete the `.md` files in the article vault directly** (a filesystem connector / file tools), and notemd reconciles them into its graph + sidebar. This is by design — the app watches the vault and merges on-disk changes.
 
 - **Where:** the **article vault path** is `articleVaultPath` from `list_projects`. Notes are `.md` files; subfolders are the topic hierarchy.
-- **Create a note:** write a new `Some Title.md` (in the root, or in a subfolder for its topic). **Plain Markdown is enough** — start with a `# Title` and the body. notemd assigns the note's identity and normalizes it on merge; you do **not** need to write front matter or a UUID.
+- **Create a note:** write a new `Some Title.md` (in the root, or in a subfolder for its topic). **Plain Markdown is enough** — the filename is the note's title, so don't repeat it as a `# H1`; start body headings at `##`. notemd assigns the note's identity and normalizes it on merge; you do **not** need to write front matter or a UUID.
 - **Link notes:** use `[[Note Title]]` (or `[[Note Title|alias]]`). notemd resolves these to real links on merge — this is how you build the graph.
 - **Cite a source or bookmark in a note:** note→source citations use inline Markdown links to a `notemd://cite/…` URL (unlike note→note `[[wikilinks]]`), and they round-trip verbatim on disk. Two forms:
   - **Whole source:** `[label](notemd://cite/<sourceID>)`.
@@ -128,5 +169,5 @@ Understand the model before suggesting or making organizational changes:
 
 ## Honesty & limits
 
-- You can **read** freely; **write to knowledge sources** via the app-mediated tools (add/edit/tag/move/delete sources, folders, anchors) when notemd is open + subscribed; and **write notes** by editing the vault's `.md` files directly (see *Editing notes*). Only claim a write succeeded if the tool returned success (for sources) or the file was actually written (for notes) — on `app_not_running`/`not_entitled`, report that plainly and don't retry-loop.
+- You can **read** freely; **write to knowledge sources** via the app-mediated tools (add/edit/tag/move/delete sources, folders, anchors) when notemd is open + subscribed; **deliver Matrix cells, argument maps and Evidence Scan verdicts** through the agent-extraction tools (the app grades them — never present your own confidence as notemd's); and **write notes** by editing the vault's `.md` files directly (see *Editing notes*). Only claim a write succeeded if the tool returned success (for sources) or the file was actually written (for notes) — on `app_not_running`/`not_entitled`, report that plainly and don't retry-loop.
 - Respect `.aiignore`, Premium gating, and "only indexed content is searchable." Surface those constraints to the user plainly rather than working around them — including for direct file edits, where `.aiignore` isn't enforced but the user's intent still holds.
