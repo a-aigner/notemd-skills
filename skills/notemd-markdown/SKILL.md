@@ -28,8 +28,9 @@ notemd resolves wikilinks by Obsidian's **closest-note / shortest-path** rule an
 ```
 
 - Use `[[Folder/Name]]` **only** to disambiguate — if a name is unique, bare `[[Name]]` is preferred and is what notemd rewrites links to on save.
-- Do **not** hand-write `[label](notemd://article/…)` links. That `notemd://` form is notemd's internal/rendered representation; author the `[[ ]]` form and notemd converts it.
-- Linking notes is also what builds notemd's graph view — see the `notemd-knowledge-graph` skill.
+- Do **not** hand-write `[label](notemd://article/…)` links (note→note). That `notemd://` form is notemd's internal/rendered representation; author the `[[ ]]` form and notemd converts it.
+- Linking notes is also what builds notemd's graph (the **Knowledge Map**) — see the `notemd-knowledge-graph` skill.
+- A note→**source** citation is different: an inline Markdown link `[label](notemd://cite/<sourceID>)` (optionally `?anchor=<anchorID>&page=N`). That `notemd://cite/…` form is written on disk verbatim — see the `notemd-research` skill.
 
 ## Frontmatter (properties)
 

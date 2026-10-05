@@ -1,5 +1,5 @@
 # notemd-research
 
-Teaches an agent to drive note.md through its CLI / MCP server: hybrid search over notes and imported PDFs, reading a source's full text, following links, citing page-level bookmarks with `notemd://cite/…` links, and the app-mediated writes (add/tag/move sources, folders, anchors). Also covers how a note.md project is structured so the agent files things where they belong.
+Teaches an agent to drive note.md through its CLI / MCP server: hybrid search over notes and imported PDFs, reading a source's full text, following links, citing page-level bookmarks with `notemd://cite/…` links, and the app-mediated writes (add/tag/move sources, folders, anchors). It also covers the agent-extraction tools that let an agent do the Literature Review Matrix, Argument Map and Evidence Scan work instead of the on-device model (`list_agent_requests`, `get_matrix`, `set_matrix_cells`, `get_argument_map`, `set_argument_map`, `get_evidence_scan`, `set_evidence_scan`), with note.md re-checking every quote and setting the grade itself. And it explains how a note.md project is structured so the agent files things where they belong.
 
-Requires note.md 1.5 or later with Premium. Install the MCP server from Settings → AI Access → *Copy MCP config*.
+Requires note.md 1.5 or later with Premium. Connect the MCP server from Project ▸ Settings… ▸ AI Access ▸ *Copy MCP Config*. To hand Matrix, Argument Map and Evidence Scan work to your agent, turn on Settings… ▸ AI Settings ▸ *Use my AI agent instead of the on-device model*.
